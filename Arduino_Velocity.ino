@@ -1,34 +1,38 @@
-#include <Motor.h> 
+#include <Servo.h>
 #define SERIAL_PORT_SPEED 115200  // Serial Speed DO NOT CHANGE!
 #define MESSAGE_LENGTH 4
 
 //! Pin Setup:
-#define Motor_OUTPUT 22
-#define ADAS_THROTTLE_OUTPUT 23
+#define LEFT_MOTOR 22
+#define RIGHT_MOTOR 23
 
 //! Servo Definition:
-#define THROTTLE_MIN 700
-#define THROTTLE_MAX 2300
-#define ADAS_MIN 0  //? Need fix
-#define ADAS_MAX 0  //? Need fix
+#define THROTTLE_MIN 1250
+#define THROTTLE_MAX 1750
 
 //! Message Decoding:
 #define STATE 0     // DO NOT CHANGE!
 #define STEERING 1  // DO NOT CHANGE!
 #define THROTTLE 2  // DO NOT CHANGE!
 
+//! State Machine:
+int current_state = 0;
+#define EMERGENCY_STOP 0
+#define IDLE 1
+#define RC_MODE 2
+#define AUTONOMOUS_MODE_EN 3
+
 //! Global Variables
 volatile uint8_t messagein[MESSAGE_LENGTH];
 
 //! Global Struct
-Motor throttle;
-Motor ADAS_throttle;
+Servo LEFT, RIGHT;
 
 void setup() {
     Serial.begin(SERIAL_PORT_SPEED);
     Serial3.begin(SERIAL_PORT_SPEED);
-    throttle.attach(Motor_OUTPUT, THROTTLE_MIN, THROTTLE_MAX);
-    ADAS_throttle.attach(ADAS_THROTTLE_OUTPUT);
+    RIGHT.attach(RIGHT_MOTOR, THROTTLE_MIN, THROTTLE_MAX);
+    LEFT.attach(LEFT_MOTOR, THROTTLE_MIN, THROTTLE_MAX);
 }
 //! Used for convering the pulse back to the throttle angle
 int pulse2percentage() {
@@ -37,13 +41,13 @@ int pulse2percentage() {
     int temp = messagein[THROTTLE];
     if (temp > 100) {
         temp = (temp - 100) * -1;
-        int val = map(temp, -100, 100, 700, 2300);
+        int val = map(temp, -100, 100, THROTTLE_MIN, THROTTLE_MAX);
         Serial.println(val);
         return val;
     } else if (temp >= 200 || temp < 0) {
         return 0;
     } else {
-        int val = map(temp, -100, 100, 700, 2300);
+        int val = map(temp, -100, 100, THROTTLE_MIN, THROTTLE_MAX);
         Serial.println(val);
         return val;
     }
@@ -89,29 +93,30 @@ void SerialInterpretation() {
 }
 void loop() {
     SerialInterpretation();
-    switch (messagein[STATE])
-    {
+    switch (messagein[STATE]) {
         case EMERGENCY_STOP:
-            motor.write(0);
+            LEFT.writeMicroseconds(pulse2percentage());
+            RIGHT.writeMicroseconds(pulse2percentage());
             break;
 
         case IDLE:
-            motor.write(0);
+            LEFT.writeMicroseconds(pulse2percentage());
+            RIGHT.writeMicroseconds(pulse2percentage());
             break;
 
         case RC_MODE:
-            pulse2percentage();
-            output = (uint8_t)val;
-            motor.write(output);
+            LEFT.writeMicroseconds(pulse2percentage());
+            RIGHT.writeMicroseconds(pulse2percentage());
             break;
-            
+
         case AUTONOMOUS_MODE_EN:
-            motor.write(0);
+            LEFT.writeMicroseconds(pulse2percentage());
+            RIGHT.writeMicroseconds(pulse2percentage());
             break;
 
         default:
+            Serial.println("System fucked up!");
             break;
     }
-    // int ServoDeg = pulse2percentage();
-    // steering.write(ServoDeg);
 }
+
