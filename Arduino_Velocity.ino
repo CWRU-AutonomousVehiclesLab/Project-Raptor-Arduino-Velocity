@@ -33,6 +33,8 @@ void setup() {
     Serial3.begin(SERIAL_PORT_SPEED);
     RIGHT.attach(RIGHT_MOTOR, THROTTLE_MIN, THROTTLE_MAX);
     LEFT.attach(LEFT_MOTOR, THROTTLE_MIN, THROTTLE_MAX);
+    messagein[THROTTLE] = 0;
+    delay(10000);
 }
 //! Used for convering the pulse back to the throttle angle
 int pulse2percentage() {
@@ -100,8 +102,6 @@ void loop() {
             break;
 
         case IDLE:
-            LEFT.writeMicroseconds(pulse2percentage());
-            RIGHT.writeMicroseconds(pulse2percentage());
             break;
 
         case RC_MODE:
